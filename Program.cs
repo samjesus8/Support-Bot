@@ -1,5 +1,6 @@
 ﻿using DiscordBotTemplate.Commands;
 using DiscordBotTemplate.Config;
+using DiscordBotTemplate.MessageLogger;
 using DiscordBotTemplate.TicketSystem;
 using DSharpPlus;
 using DSharpPlus.CommandsNext;
@@ -7,6 +8,7 @@ using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Extensions;
+using DSharpPlus.SlashCommands;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,8 +19,11 @@ namespace DiscordBotTemplate
     {
         public static DiscordClient Client { get; private set; }
         public static CommandsNextExtension Commands { get; private set; }
+        public static MessageLog logger;
         static async Task Main(string[] args)
         {
+            logger = MessageLog.instance;
+
             //1. Get the details of your config.json file by deserialising it
             var configJsonFile = new JSONReader();
             await configJsonFile.ReadJSON();
@@ -45,6 +50,7 @@ namespace DiscordBotTemplate
             Client.Ready += OnClientReady;
             Client.ComponentInteractionCreated += ComponentEventHandler;
             Client.ModalSubmitted += ModalEventHandler;
+            Client.MessageCreated += MessageCreatedHandler;
 
             //6. Set up the Commands Configuration
             var commandsConfig = new CommandsNextConfiguration()
@@ -56,14 +62,34 @@ namespace DiscordBotTemplate
             };
 
             Commands = Client.UseCommandsNext(commandsConfig);
+            var slashCommands = Client.UseSlashCommands();
 
             //7. Register your commands
 
             Commands.RegisterCommands<Basic>();
+            slashCommands.RegisterCommands<BasicSl>();
 
             //8. Connect to get the Bot online
             await Client.ConnectAsync();
             await Task.Delay(-1);
+        }
+
+        private static Task MessageCreatedHandler(DiscordClient sender, MessageCreateEventArgs e)
+        {
+            if (!e.Author.IsBot)
+            {
+                var message = new DMessage
+                {
+                    username = e.Author.Username,
+                    channelID = e.Channel.Id,
+                    content = e.Message.Content,
+                    SendDate = DateTime.UtcNow,
+                };
+
+                logger.messages.Add(message);
+            }
+
+            return Task.CompletedTask;
         }
 
         private static async Task ModalEventHandler(DiscordClient sender, ModalSubmitEventArgs e)
