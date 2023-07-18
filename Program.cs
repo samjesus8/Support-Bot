@@ -106,6 +106,7 @@ namespace DiscordBotTemplate
 
         private static async Task ComponentEventHandler(DiscordClient sender, ComponentInteractionCreateEventArgs e)
         {
+            var ticketEngine = new TicketEngine();
             switch (e.Interaction.Data.CustomId)
             {
                 case "submitButton":
@@ -115,6 +116,62 @@ namespace DiscordBotTemplate
                         .AddComponents(new TextInputComponent("Type your issue here...", "supportTextBox"));
 
                     await e.Interaction.CreateResponseAsync(InteractionResponseType.Modal, supportModal);
+                    break;
+
+                case "viewButton":
+                    var tickets = ticketEngine.GetTickets();
+                    int count = 0;
+                    string[] tempList = new string[tickets.Count];
+
+                    foreach (var ticket in tickets)
+                    {
+                        tempList[count] = $"TicketNo: **{ticket.ticketNo}**, TicketId: **{ticket.ticketId}**, Author: **{ticket.username}**";
+                        count++;
+                    }
+
+                    var ticketViewEmbed = new DiscordEmbedBuilder()
+                    {
+                        Color = DiscordColor.Azure,
+                        Title = "Ticket Viewer",
+                        Description = string.Join("\n", tempList)
+                    };
+
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.UpdateMessage, new DiscordInteractionResponseBuilder().AddEmbed(ticketViewEmbed));
+                    break;
+
+                case "deleteButton":
+                    var idEmbed = new DiscordEmbedBuilder()
+                    {
+                        Color = DiscordColor.Azure,
+                        Title = "Please enter the ID of the ticket you want to delete"
+                    };
+
+                    await e.Interaction.CreateResponseAsync(InteractionResponseType.ChannelMessageWithSource, new DiscordInteractionResponseBuilder().AddEmbed(idEmbed));
+                    var ID = await e.Channel.GetNextMessageAsync(TimeSpan.FromMinutes(3));
+
+                    var isDeleted = ticketEngine.DeleteTicket(ulong.Parse(ID.Result.Content));
+
+                    if (isDeleted == true)
+                    {
+                        var success = new DiscordEmbedBuilder()
+                        {
+                            Color = DiscordColor.Green,
+                            Title = "Successfully deleted the ticket!!!"
+                        };
+                        await e.Channel.SendMessageAsync(embed: success);
+                    }
+                    else
+                    {
+                        var failure = new DiscordEmbedBuilder()
+                        {
+                            Color = DiscordColor.Red,
+                            Title = "Something went wrong!!!"
+                        };
+                        await e.Channel.SendMessageAsync(embed: failure);
+                    }
+                    break;
+
+                case "editButton":
                     break;
             }
         }

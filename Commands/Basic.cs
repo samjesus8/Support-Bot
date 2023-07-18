@@ -22,5 +22,24 @@ namespace DiscordBotTemplate.Commands
 
             await ctx.Channel.SendMessageAsync(supportEmbed);
         }
+
+        [Command("manage")]
+        public async Task ManageSystem(CommandContext ctx)
+        {
+            var viewButton = new DiscordButtonComponent(ButtonStyle.Primary, "viewButton", "View Tickets");
+            var editButton = new DiscordButtonComponent(ButtonStyle.Primary, "editButton", "Edit Ticket");
+            var deleteButton = new DiscordButtonComponent(ButtonStyle.Primary, "deleteButton", "Delete Ticket");
+
+            var dashboard = new DiscordMessageBuilder()
+                .AddEmbed(new DiscordEmbedBuilder()
+                    .WithColor(DiscordColor.Azure)
+                    .WithTitle("Ticket Dashboard")
+                    .WithDescription("1) View Tickets \n" +
+                                     "2) Edit Ticket \n" +
+                                     "3) Delete Ticket"))
+                .AddComponents(viewButton, editButton, deleteButton);
+
+            await ctx.Channel.SendMessageAsync(dashboard);
+        }
     }
 }
